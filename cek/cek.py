@@ -35,6 +35,16 @@ JS = siapkan_bahasa(tsjs, POLA_FUNGSI_JS)
 # ekstensi file -> bahasa yang dipakai untuk mem-parse-nya
 BAHASA = {".py": PY, ".js": JS, ".jsx": JS, ".mjs": JS, ".cjs": JS}
 
+def baris_error(node):
+    """Baris node ERROR/MISSING pertama (urut posisi di file)."""
+    if node.is_error or node.is_missing:
+        return node.start_point[0] + 1
+    for child in node.children:
+        if child.has_error or child.is_error or child.is_missing:
+            hasil = baris_error(child)
+            if hasil:
+                return hasil
+    return None
 
 def cek_file(path, bahasa):
     tree = bahasa["parser"].parse(path.read_bytes())
@@ -49,10 +59,11 @@ def cek_file(path, bahasa):
         nama = cap["nama"][0].text.decode(errors="replace")
         jumlah = fungsi.end_point[0] - fungsi.start_point[0] + 1
         if jumlah > BATAS_BARIS:
-            print(f"{path}:{fungsi.start_point[0] + 1}: fungsi '{nama}' terlalu panjang ({jumlah} baris)")
+            print(f"{path}:{fungsi.start_point[0] + 1}: fungsi '{nama}' terlalu panjang ({jumlah})") 
 
-    # Fitur 3 (TODO): file yang pohonnya mengandung error
-
+    # Fitur 3: file yang pohonnya mengandung error
+    if tree.root_node.has_error:
+        print(f"{path}:{baris_error(tree.root_node)}: sintaks bermasalah (pohon mengandung ERROR/MISSING)")
 
 if len(sys.argv) < 2:
     sys.exit("Pemakaian: python cek.py <folder>")
