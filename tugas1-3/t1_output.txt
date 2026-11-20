@@ -1,0 +1,46 @@
+=========================
+Kode 1
+(module (function_definition name: (identifier) parameters: (parameters (identifier)) body: (block (return_statement (identifier)))))
+def anonim
+identifier bernama
+parameters bernama
+: anonim
+block bernama
+
+
+( anonim
+identifier bernama
+) anonim
+=========================
+Kode 2
+(module (if_statement condition: (comparison_operator (identifier) (integer)) consequence: (block (expression_statement (call function: (identifier) arguments: (argument_list (string (string_start) (string_content) (string_end)))))) alternative: (else_clause body: (block (expression_statement (call function: (identifier) arguments: (argument_list (string (string_start) (string_content) (string_end)))))))))
+if anonim
+comparison_operator bernama
+: anonim
+block bernama
+else_clause bernama
+
+
+else anonim
+: anonim
+block bernama
+=========================
+Kode 3
+(module (class_definition name: (identifier) body: (block (function_definition name: (identifier) parameters: (parameters (identifier)) body: (block (return_statement (string (string_start) (string_content) (string_end))))))))
+-- child langsung class_definition --
+class anonim
+identifier bernama
+: anonim
+block bernama
+-- isi body (block) --
+function_definition bernama
+-- children vs named_children pada body --
+1 1
+=========================
+Kode 4 (sengaja rusak: tanda ':' dihapus)
+(module (ERROR (identifier) (parameters (identifier)) (identifier)))
+has_error: True
+=========================
+Kode 5 (sengaja rusak: tanda ')' dihapus)
+(module (ERROR (identifier) (identifier)) (return_statement (identifier)))
+has_error: True
