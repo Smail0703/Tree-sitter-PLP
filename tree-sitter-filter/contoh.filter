@@ -1,0 +1,1 @@
+status = "open" and (priority >= 2.5 or owner = "budi") and not archived = true and title contains "invoice" and status in ("open", "pending") and customer.city != "Bandung"

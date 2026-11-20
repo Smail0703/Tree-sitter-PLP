@@ -1,0 +1,212 @@
+==================
+perbandingan dengan string
+==================
+
+status = "open"
+
+---
+
+(query
+  (comparison
+    field: (identifier)
+    value: (string)))
+
+==================
+perbandingan dengan angka
+==================
+
+priority >= 2
+
+---
+
+(query
+  (comparison
+    field: (identifier)
+    value: (number)))
+
+==================
+perbandingan dengan boolean
+==================
+
+archived = true
+
+---
+
+(query
+  (comparison
+    field: (identifier)
+    value: (boolean)))
+
+==================
+nama field dengan titik
+==================
+
+customer.city != "Bandung"
+
+---
+
+(query
+  (comparison
+    field: (identifier)
+    value: (string)))
+
+==================
+and lebih kuat dari or
+==================
+
+status = "open" or priority > 2 and owner = "budi"
+
+---
+
+(query
+  (or_expression
+    left: (comparison
+      field: (identifier)
+      value: (string))
+    right: (and_expression
+      left: (comparison
+        field: (identifier)
+        value: (number))
+      right: (comparison
+        field: (identifier)
+        value: (string)))))
+
+==================
+a = 1 or b = 2 and c = 3 mengelompok sebagai a or (b and c)
+==================
+
+a = 1 or b = 2 and c = 3
+
+---
+
+(query
+  (or_expression
+    left: (comparison
+      field: (identifier)
+      value: (number))
+    right: (and_expression
+      left: (comparison
+        field: (identifier)
+        value: (number))
+      right: (comparison
+        field: (identifier)
+        value: (number)))))
+
+==================
+and bersifat left-associative
+==================
+
+a = 1 and b = 2 and c = 3
+
+---
+
+(query
+  (and_expression
+    left: (and_expression
+      left: (comparison
+        field: (identifier)
+        value: (number))
+      right: (comparison
+        field: (identifier)
+        value: (number)))
+    right: (comparison
+      field: (identifier)
+      value: (number))))
+
+==================
+kurung mengubah prioritas
+==================
+
+(a = 1 or b = 2) and c = 3
+
+---
+
+(query
+  (and_expression
+    left: (parenthesized
+      (or_expression
+        left: (comparison
+          field: (identifier)
+          value: (number))
+        right: (comparison
+          field: (identifier)
+          value: (number))))
+    right: (comparison
+      field: (identifier)
+      value: (number))))
+
+==================
+not mengikat lebih kuat dari and
+==================
+
+not archived = true and owner = "budi"
+
+---
+
+(query
+  (and_expression
+    left: (not_expression
+      operand: (comparison
+        field: (identifier)
+        value: (boolean)))
+    right: (comparison
+      field: (identifier)
+      value: (string))))
+
+==================
+in dengan tiga nilai
+==================
+
+status in ("open", "pending", "closed")
+
+---
+
+(query
+  (in_expression
+    field: (identifier)
+    value: (string)
+    value: (string)
+    value: (string)))
+
+==================
+in dengan satu nilai angka
+==================
+
+priority in (1)
+
+---
+
+(query
+  (in_expression
+    field: (identifier)
+    value: (number)))
+
+==================
+contains untuk pencarian teks
+==================
+
+title contains "invoice"
+
+---
+
+(query
+  (contains_expression
+    field: (identifier)
+    value: (string)))
+
+==================
+kata kunci tidak tertukar dengan identifier
+==================
+
+order_id = 1 and android = 2
+
+---
+
+(query
+  (and_expression
+    left: (comparison
+      field: (identifier)
+      value: (number))
+    right: (comparison
+      field: (identifier)
+      value: (number))))

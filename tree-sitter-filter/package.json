@@ -1,0 +1,1 @@
+{ "name": "tree-sitter-filter", "version": "0.1.0", "description": "DSL filter", "main": "bindings/node", "tree-sitter": [{ "scope": "source.filter", "file-types": ["filter"] }] }
