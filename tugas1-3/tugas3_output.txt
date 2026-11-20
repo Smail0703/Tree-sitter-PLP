@@ -1,0 +1,23 @@
+== 1. Nama fungsi + jumlah parameter (matches) ==
+  tambah: 2 parameter
+  kali: 3 parameter
+  tanpa_parameter: 0 parameter
+  bagi: 3 parameter
+  pangkat: 4 parameter
+  cocok dengan hitungan manual: True
+== 2. Pemanggilan print(...) ==
+  baris 13
+  baris 18
+  baris 25
+  baris 33
+  baris 34
+  jumlah: 5 | manual: 5 | cocok: True
+== 3. Import (nama modul) ==
+  baris 1: os
+  baris 2: sys
+  baris 3: pathlib
+  baris 4: collections
+  cocok dengan manual ['os','sys','pathlib','collections']: True
+== 4. [Pengayaan] Docstring fungsi ==
+  baris 8: """Menjumlahkan dua angka."""
+  jumlah: 1 | manual: 1 (hanya tambah; docstring kelas bukan fungsi)
