@@ -4,7 +4,7 @@ CLI kecil berbasis **tree-sitter** yang memeriksa file kode di dalam sebuah fold
 
 1. komentar yang berisi `TODO` atau `FIXME`,
 2. fungsi yang panjangnya lebih dari 30 baris, dan
-3. file yang pohonnya mengandung error sintaks. *(fitur ini belum diisi, lihat catatan di bawah)*
+3. file yang pohonnya mengandung error sintaks (node `ERROR` atau `MISSING`).
 
 Bahasa yang didukung: **Python** (`.py`) dan **JavaScript** (`.js`, `.jsx`, `.mjs`, `.cjs`).
 
@@ -18,8 +18,10 @@ cek/
     ├── todo.py     # komentar TODO/FIXME (Python)
     ├── panjang.py  # fungsi panjang, tepat 30 baris, dan pendek (Python)
     ├── tepi.py     # kasus tepi: string, huruf kecil, method, fungsi bersarang (Python)
-    └── contoh.js   # semua kasus di atas untuk JavaScript
-    # (tambahkan file uji fitur 3 di sini, misalnya rusak.py)
+    ├── contoh.js   # semua kasus di atas untuk JavaScript
+    ├── rusak.py    # sintaks Python rusak (tanda ':' pada def hilang)
+    ├── rusak.js    # sintaks JavaScript rusak (kurung tidak ditutup)
+    └── valid.py    # file benar, tidak boleh dilaporkan fitur 3
 ```
 
 ## Memasang dependensi
@@ -54,17 +56,23 @@ Hasil `python cek.py uji`:
 ```
 uji/contoh.js:1: // TODO: pindahkan ke modul util
 uji/contoh.js:3: /* FIXME: blok komentar */
-uji/contoh.js:6: fungsi 'panjangDeklarasi' terlalu panjang (36 baris)
-uji/contoh.js:43: fungsi 'panjangPanah' terlalu panjang (35 baris)
-uji/contoh.js:80: fungsi 'metodePanjang' terlalu panjang (33 baris)
-uji/panjang.py:1: fungsi 'fungsi_panjang' terlalu panjang (36 baris)
+uji/contoh.js:6: fungsi 'panjangDeklarasi' terlalu panjang (36)
+uji/contoh.js:43: fungsi 'panjangPanah' terlalu panjang (35)
+uji/contoh.js:80: fungsi 'metodePanjang' terlalu panjang (33)
+uji/panjang.py:1: fungsi 'fungsi_panjang' terlalu panjang (36)
+uji/rusak.js:3: sintaks bermasalah (pohon mengandung ERROR/MISSING)
+uji/rusak.py:3: sintaks bermasalah (pohon mengandung ERROR/MISSING)
 uji/tepi.py:3: # FIXME: komentar di akhir baris
-uji/tepi.py:6: fungsi 'metode_panjang' terlalu panjang (32 baris)
-uji/tepi.py:39: fungsi 'luar' terlalu panjang (34 baris)
-uji/tepi.py:40: fungsi 'dalam' terlalu panjang (32 baris)
+uji/tepi.py:6: fungsi 'metode_panjang' terlalu panjang (32)
+uji/tepi.py:39: fungsi 'luar' terlalu panjang (34)
+uji/tepi.py:40: fungsi 'dalam' terlalu panjang (32)
 uji/todo.py:1: # TODO: rapikan modul ini
 uji/todo.py:3: # FIXME: nama masih hardcode
 ```
+
+Angka dalam kurung pada baris fungsi adalah jumlah baris fungsi tersebut. `valid.py` tidak muncul karena
+file itu sehat: tidak ada TODO/FIXME, tidak ada fungsi panjang, dan pohonnya tidak mengandung error.
+Program hanya mencetak jika ada temuan.
 
 (Di Windows pemisah path tercetak `\`, bukan `/`.)
 
@@ -129,13 +137,54 @@ seluruh isinya, sehingga baris milik fungsi dalam terhitung di dua fungsi.
 
 ### 3. Fitur 3: file yang pohonnya mengandung error
 
-> **(Fitur 3).**  Hal yang perlu dijelaskan:
->
-> - apa itu node `ERROR` dan `MISSING`, serta kenapa tree-sitter tetap menghasilkan pohon untuk kode yang rusak,
-> - cara mendeteksi error di seluruh file (`root_node.has_error`) dan kenapa itu belum menunjukkan letaknya,
-> - cara mencari node error pertama (fungsi rekursif, `is_error`, `is_missing`) dan kenapa baris yang dilaporkan
->   berasal dari `start_point[0] + 1`,
-> - bentuk keluaran yang dicetak.
+Tree-sitter tidak menolak kode yang salah. Parser-nya dirancang untuk editor, yang hampir selalu menampilkan
+kode yang sedang setengah ditulis, jadi tetap menghasilkan pohon dan menandai bagian yang tidak cocok dengan
+tata bahasa:
+
+- node `ERROR` membungkus potongan kode yang tidak bisa dicocokkan dengan aturan grammar,
+- node `MISSING` adalah token yang disisipkan parser sendiri karena dianggap hilang (misalnya `)` atau `:`).
+
+**Mendeteksi error di seluruh file:** `tree.root_node.has_error` bernilai `True` jika ada node `ERROR` atau
+`MISSING` di mana pun dalam pohon. Nilai ini hanya menjawab "ada atau tidak", belum menunjukkan letaknya.
+
+**Mencari letak error:** fungsi rekursif `baris_error(node)` menelusuri pohon dari akar.
+
+```python
+def baris_error(node):
+    """Baris node ERROR/MISSING pertama (urut posisi di file)."""
+    if node.is_error or node.is_missing:
+        return node.start_point[0] + 1
+    for child in node.children:
+        if child.has_error or child.is_error or child.is_missing:
+            hasil = baris_error(child)
+            if hasil:
+                return hasil
+    return None
+```
+
+- Jika node itu sendiri `ERROR` atau `MISSING`, nomor barisnya langsung dikembalikan.
+- Jika tidak, hanya child yang mengandung error yang ditelusuri, sehingga cabang yang sehat dilewati.
+- Child ditelusuri dari kiri ke kanan, jadi yang ditemukan adalah error **pertama menurut posisi di file**.
+- Nomor baris diambil dari `start_point[0] + 1`, karena posisi di tree-sitter mulai dari 0 sedangkan nomor
+  baris di editor mulai dari 1.
+
+Pemanggilannya di dalam `cek_file`:
+
+```python
+if tree.root_node.has_error:
+    print(f"{path}:{baris_error(tree.root_node)}: sintaks bermasalah (pohon mengandung ERROR/MISSING)")
+```
+
+Bentuk keluarannya:
+
+```
+uji/rusak.py:3: sintaks bermasalah (pohon mengandung ERROR/MISSING)
+```
+
+Baris yang dilaporkan adalah tempat parser pertama kali tidak bisa melanjutkan, dan bisa berbeda dari tempat
+kesalahan sebenarnya (misalnya kurung yang lupa ditutup baru terasa beberapa baris kemudian). Fitur ini
+berlaku untuk Python dan JavaScript tanpa kode tambahan, karena `has_error`, `is_error`, dan `is_missing`
+tersedia pada node dari grammar mana pun.
 
 ### 4. Dukungan JavaScript
 
@@ -213,10 +262,8 @@ milik `dalam` terhitung dua kali (di `luar` dan di `dalam`). Ini sesuai dengan a
 
 ### Fitur 3: file yang pohonnya mengandung error
 
-> **(Fitur 3).** 
-
 | # | Kasus yang diuji | File | Yang diharapkan | Hasil |
 | --- | --- | --- | --- | --- |
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
+| 1 | Tanda `:` pada `def` hilang (Python) | `rusak.py` baris 3 | Dilaporkan di baris 3 | Sesuai |
+| 2 | Kurung tidak ditutup pada `function f( {` (JavaScript) | `rusak.js` baris 3 | Dilaporkan di baris 3 | Sesuai |
+| 3 | File yang sintaksnya benar | `valid.py` | Tidak dilaporkan | Sesuai |
